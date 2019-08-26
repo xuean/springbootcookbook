@@ -1,0 +1,91 @@
+buildscript {
+	ext {
+		springBootVersion = '2.1.7.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+		maven { url "https://repo.spring.io/snapshot" }
+		maven { url "https://repo.spring.io/milestone" }
+
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("se.transmode.gradle:gradle-docker:1.2")
+	}
+}
+plugins {
+	id 'org.springframework.boot' version '2.1.7.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+	id 'java'
+	id 'groovy'
+}
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'application'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'docker'
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+	maven { url "https://repo.spring.io/snapshot" }
+	maven { url "https://repo.spring.io/milestone" }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+/*configurations {
+	compile.exclude module: "spring-boot-starter-tomcat"
+}*/
+task distDocker(type: Docker,
+		overwrite: true,
+		dependsOn: bootDistTar) {
+	group = 'docker'
+	description = "Packs the project's JVM application as a Docker image."
+
+	inputs.files project.bootJar
+	def installDir = "/" + project.bootDistTar.archiveName - ".${project.bootDistTar.extension}"
+
+	doFirst {
+		tag "ch6"
+		push false
+		exposePort 8080
+		exposePort 8443
+		addFile file("${System.properties['user.home']}/.keystore"), "/root/"
+		applicationName = project.applicationName
+		addFile project.bootJar.outputs.files.singleFile
+		//addFile project.bootDistTar.outputs.files.singleFile
+
+		def executableName = "/" + project.bootJar.outputs.files.singleFile.name
+		//entryPoint = ["$installDir/bin/${project.applicationName}"]
+		entryPoint = ["$executableName"]
+	}
+}
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-rest'
+	compileOnly 'org.projectlombok:lombok:1.18.4'
+	//implementation 'com.google.code.gson:gson:2.3.1'
+	annotationProcessor 'org.projectlombok:lombok:1.18.4'
+	//compile 'org.springframework.boot:spring-boot-starter-jetty'
+	runtimeOnly 'com.h2database:h2'
+	runtime 'mysql:mysql-connector-java'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'info.cukes:cucumber-spring:1.2.5'
+	testImplementation 'info.cukes:cucumber-java8:1.2.5'
+	testImplementation 'info.cukes:cucumber-junit:1.2.5'
+	testImplementation 'org.spockframework:spock-core:1.1-groovy-2.4-rc-2'
+	testImplementation 'org.spockframework:spock-spring:1.1-groovy-2.4-rc-2'
+}
+
+
+
